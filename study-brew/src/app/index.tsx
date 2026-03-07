@@ -30,6 +30,7 @@ export default function StudyBrewApp() {
   const [onboardingStep, setOnboardingStep] = useState(0); 
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   
+  // Visibility States
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isChatVisible, setIsChatVisible] = useState(false);
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
@@ -38,14 +39,18 @@ export default function StudyBrewApp() {
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
   const [isTimePickerVisible, setIsTimePickerVisible] = useState(false);
 
+  // AI States (Διορθώθηκε το isThinking εδώ)
+  const [isThinking, setIsThinking] = useState(false); 
   const [chatMessages, setChatMessages] = useState([{ role: 'bot', text: 'Γεια! Πώς μπορώ να βοηθήσω στο διάβασμα;' }]);
   const [inputText, setInputText] = useState('');
   const [chatSession, setChatSession] = useState<ChatSession | null>(null);
 
+  // Profile data
   const [currentField, setCurrentField] = useState<string>('');
   const [profileData, setProfileData] = useState({ studies: 'Select', level: 'Select', style: 'Select', detail: '' });
   const [interests, setInterests] = useState(['TECH', 'BUSINESS', 'ART']);
   
+  // Reservation states
   const [selectedCafe, setSelectedCafe] = useState<any>(null);
   const [reservationType, setReservationType] = useState<'alone' | 'team' | null>(null);
   const [teamOption, setTeamOption] = useState<'friends' | 'others' | null>(null);
@@ -172,27 +177,11 @@ export default function StudyBrewApp() {
       <MapView 
         style={styles.map} 
         showsUserLocation={true} 
-        initialRegion={{ 
-            latitude: location?.coords.latitude || 37.9838, 
-            longitude: location?.coords.longitude || 23.7275, 
-            latitudeDelta: 0.1, 
-            longitudeDelta: 0.1 
-        }} 
-        onPress={() => {
-            setSelectedCafe(null);
-            setReservationType(null);
-            setTeamOption(null);
-        }}
+        initialRegion={{ latitude: 37.9838, longitude: 23.7275, latitudeDelta: 0.1, longitudeDelta: 0.1 }} 
+        onPress={() => { setSelectedCafe(null); setReservationType(null); setTeamOption(null); }}
       >
         {dummyCafes.map(cafe => (
-          <Marker 
-            key={cafe.id}
-            coordinate={cafe.coords}
-            onPress={(e) => {
-              e.stopPropagation();
-              setSelectedCafe(cafe);
-            }}
-          >
+          <Marker key={cafe.id} coordinate={cafe.coords} onPress={(e) => { e.stopPropagation(); setSelectedCafe(cafe); }}>
             <View style={styles.customMarker}><Text style={{fontSize: 20}}>☕</Text></View>
           </Marker>
         ))}
@@ -203,51 +192,20 @@ export default function StudyBrewApp() {
             <View style={styles.reservationCard}>
                 <View style={styles.resLeft}>
                     <Text style={styles.resRedTitle}>Reservation</Text>
-                    
                     <View style={styles.resTypeRow}>
-                        <TouchableOpacity 
-                            style={[styles.resTypeBox, reservationType === 'alone' && styles.activeBox]} 
-                            onPress={() => {setReservationType('alone'); setTeamOption(null);}}
-                        >
-                            <Text style={styles.resTypeText}>Alone</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity 
-                            style={[styles.resTypeBox, reservationType === 'team' && styles.activeBox]} 
-                            onPress={() => setReservationType('team')}
-                        >
-                            <Text style={styles.resTypeText}>Team</Text>
-                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.resTypeBox, reservationType === 'alone' && styles.activeBox]} onPress={() => {setReservationType('alone'); setTeamOption(null);}}><Text style={styles.resTypeText}>Alone</Text></TouchableOpacity>
+                        <TouchableOpacity style={[styles.resTypeBox, reservationType === 'team' && styles.activeBox]} onPress={() => setReservationType('team')}><Text style={styles.resTypeText}>Team</Text></TouchableOpacity>
                     </View>
-
                     {reservationType === 'team' && (
                         <View style={styles.teamOptionsRow}>
-                            <TouchableOpacity 
-                                style={[styles.smallOptionBox, teamOption === 'friends' && styles.activeBox]}
-                                onPress={() => setTeamOption('friends')}
-                            >
-                                <Text style={styles.smallOptionText}>with friends</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity 
-                                style={[styles.smallOptionBox, teamOption === 'others' && styles.activeBox]}
-                                onPress={() => setTeamOption('others')}
-                            >
-                                <Text style={styles.smallOptionText}>other people</Text>
-                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.smallOptionBox, teamOption === 'friends' && styles.activeBox]} onPress={() => setTeamOption('friends')}><Text style={styles.smallOptionText}>with friends</Text></TouchableOpacity>
+                            <TouchableOpacity style={[styles.smallOptionBox, teamOption === 'others' && styles.activeBox]} onPress={() => setTeamOption('others')}><Text style={styles.smallOptionText}>other people</Text></TouchableOpacity>
                         </View>
                     )}
-
-                    <TouchableOpacity onPress={() => setIsDatePickerVisible(true)}>
-                      <Text style={styles.resDateTime}>When: {resDate}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setIsTimePickerVisible(true)}>
-                      <Text style={styles.resDateTime}>Time: {resTime}</Text>
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity onPress={() => { setSelectedCafe(null); Alert.alert("Confirmed", "Reservation Sent!"); }}>
-                        <Text style={styles.resDoneBtn}>DONE</Text>
-                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => setIsDatePickerVisible(true)}><Text style={styles.resDateTime}>When: {resDate}</Text></TouchableOpacity>
+                    <TouchableOpacity onPress={() => setIsTimePickerVisible(true)}><Text style={styles.resDateTime}>Time: {resTime}</Text></TouchableOpacity>
+                    <TouchableOpacity onPress={() => { setSelectedCafe(null); Alert.alert("Confirmed", "Reservation Sent!"); }}><Text style={styles.resDoneBtn}>DONE</Text></TouchableOpacity>
                 </View>
-
                 <View style={styles.resRight}>
                     <Text style={styles.resShopName}>{selectedCafe.name}</Text>
                     <Image source={{ uri: selectedCafe.image }} style={styles.resImage} />
@@ -258,28 +216,7 @@ export default function StudyBrewApp() {
         </View>
       )}
 
-      {/* DATE PICKER MODAL */}
-      <Modal visible={isDatePickerVisible} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Set Date</Text>
-            <TextInput style={styles.input} placeholder="dd/mm/yy" onChangeText={setResDate} value={resDate} />
-            <TouchableOpacity style={styles.loginBtn} onPress={() => setIsDatePickerVisible(false)}><Text style={styles.loginBtnText}>OK</Text></TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* TIME PICKER MODAL */}
-      <Modal visible={isTimePickerVisible} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Set Time</Text>
-            <TextInput style={styles.input} placeholder="00:00" onChangeText={setResTime} value={resTime} />
-            <TouchableOpacity style={styles.loginBtn} onPress={() => setIsTimePickerVisible(false)}><Text style={styles.loginBtnText}>OK</Text></TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
+      {/* FOOTER */}
       <View style={styles.footer}>
         <TouchableOpacity style={styles.navBtn} onPress={() => setIsCafesVisible(true)}>
           <Text style={styles.navIcon}>🏠</Text>
@@ -289,7 +226,15 @@ export default function StudyBrewApp() {
         <TouchableOpacity style={styles.navBtn} onPress={() => setIsChatVisible(true)}><Text style={styles.navIcon}>🤖</Text></TouchableOpacity>
       </View>
 
-      {/* Settings Modal */}
+      {/* MODALS */}
+      <Modal visible={isDatePickerVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}><View style={styles.modalContent}><Text style={styles.modalTitle}>Set Date</Text><TextInput style={styles.input} placeholder="dd/mm/yy" onChangeText={setResDate} value={resDate} /><TouchableOpacity style={styles.loginBtn} onPress={() => setIsDatePickerVisible(false)}><Text style={styles.loginBtnText}>OK</Text></TouchableOpacity></View></View>
+      </Modal>
+
+      <Modal visible={isTimePickerVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}><View style={styles.modalContent}><Text style={styles.modalTitle}>Set Time</Text><TextInput style={styles.input} placeholder="00:00" onChangeText={setResTime} value={resTime} /><TouchableOpacity style={styles.loginBtn} onPress={() => setIsTimePickerVisible(false)}><Text style={styles.loginBtnText}>OK</Text></TouchableOpacity></View></View>
+      </Modal>
+
       <Modal visible={isSettingsVisible} animationType="fade">
         <View style={styles.settingsContainer}>
           <ScrollView contentContainerStyle={{paddingBottom: 40}}>
@@ -298,9 +243,6 @@ export default function StudyBrewApp() {
               </TouchableOpacity>
               <Text style={styles.settingsLabel}>Language: English</Text>
               <Text style={styles.settingsLabel}>Notifications: ON</Text>
-              <Text style={styles.settingsLabel}>Privacy</Text>
-              <Text style={styles.settingsLabel}>Dark mode: Off</Text>
-              <Text style={styles.settingsLabel}>More about the team</Text>
               <TouchableOpacity style={styles.logoutBtn} onPress={() => { setIsSettingsVisible(false); setOnboardingStep(0); setIsLoggedIn(false); }}>
                 <Text style={styles.logoutText}>Log out</Text>
               </TouchableOpacity>
@@ -308,41 +250,27 @@ export default function StudyBrewApp() {
         </View>
       </Modal>
 
-      {/* Account Modal */}
       <Modal visible={isAccountVisible} animationType="slide">
         <View style={styles.accountContainer}>
-          <TouchableOpacity onPress={() => setIsAccountVisible(false)}>
-            <Text style={styles.accountTitle}>Account</Text>
-          </TouchableOpacity>
-          
+          <TouchableOpacity onPress={() => setIsAccountVisible(false)}><Text style={styles.accountTitle}>Account</Text></TouchableOpacity>
           <View style={styles.accountHeaderRow}>
-            <View style={styles.profileIconContainer}>
-               <Text style={styles.largeProfileIcon}>👤</Text>
-               <TouchableOpacity style={styles.plusCircle}><Text style={styles.plusText}>+</Text></TouchableOpacity>
-            </View>
+            <View style={styles.profileIconContainer}><Text style={styles.largeProfileIcon}>👤</Text><TouchableOpacity style={styles.plusCircle}><Text style={styles.plusText}>+</Text></TouchableOpacity></View>
             <Text style={styles.displayNameText}>Display name</Text>
           </View>
-
-          <View style={styles.bioBox}>
-             <Text style={styles.bioTitle}>Bio</Text>
-          </View>
-
+          <View style={styles.bioBox}><Text style={styles.bioTitle}>Bio</Text></View>
           <View style={styles.friendActionRow}>
             <TouchableOpacity style={styles.friendBtn}><Text style={styles.friendBtnText}>My friends🫂</Text></TouchableOpacity>
             <TouchableOpacity style={styles.friendBtn}><Text style={styles.friendBtnText}>🔍 Find more friends</Text></TouchableOpacity>
           </View>
-
-          <TouchableOpacity style={styles.editInfoBtn}>
-            <Text style={styles.editInfoText}>Edit personal info</Text>
-          </TouchableOpacity>
+          <TouchableOpacity style={styles.editInfoBtn}><Text style={styles.editInfoText}>Edit personal info</Text></TouchableOpacity>
         </View>
       </Modal>
 
-      {/* Chat Modal */}
       <Modal visible={isChatVisible} animationType="slide">
         <View style={styles.chatContainer}>
           <Text style={styles.modalTitle}>Study AI Assistant</Text>
           <ScrollView style={{flex: 1}}>{chatMessages.map((m, i) => <Text key={i} style={m.role === 'user' ? styles.userMsg : styles.botMsg}>{m.text}</Text>)}</ScrollView>
+          {isThinking && <ActivityIndicator />}
           <View style={styles.inputRow}>
             <TextInput style={styles.chatInput} value={inputText} onChangeText={setInputText} placeholder="Type..." />
             <TouchableOpacity onPress={handleSend}><Text style={{fontWeight:'bold'}}>Send</Text></TouchableOpacity>
@@ -351,7 +279,6 @@ export default function StudyBrewApp() {
         </View>
       </Modal>
 
-      {/* Cafes Modal */}
       <Modal visible={isCafesVisible} animationType="slide">
         <View style={styles.cafesContainer}>
           <Text style={styles.modalTitle}>Available Cafes</Text>
