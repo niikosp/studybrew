@@ -10,30 +10,9 @@ const genAI = new GoogleGenerativeAI("YOUR_API_KEY");
 
 // Ψεύτικα δεδομένα για καφέ
 const dummyCafes = [
-  {
-    id: 1,
-    name: "Study Grounds",
-    location: "Exarcheia",
-    coords: { latitude: 37.9858, longitude: 23.7355 },
-    image: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24',
-    rating: "⭐⭐⭐⭐⭐"
-  },
-  {
-    id: 2,
-    name: "The Library Cafe",
-    location: "Syntagma",
-    coords: { latitude: 37.9755, longitude: 23.7348 },
-    image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085',
-    rating: "⭐⭐⭐⭐"
-  },
-  {
-    id: 3,
-    name: "Brew & Book",
-    location: "Kolonaki",
-    coords: { latitude: 37.9785, longitude: 23.7420 },
-    image: 'https://images.unsplash.com/photo-1501339817302-cd4468881444',
-    rating: "⭐⭐⭐⭐⭐"
-  }
+  { id: 1, name: "Study Grounds", location: "Exarcheia", coords: { latitude: 37.9858, longitude: 23.7355 }, image: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24', rating: "⭐⭐⭐⭐⭐" },
+  { id: 2, name: "The Library Cafe", location: "Syntagma", coords: { latitude: 37.9755, longitude: 23.7348 }, image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085', rating: "⭐⭐⭐⭐" },
+  { id: 3, name: "Brew & Book", location: "Kolonaki", coords: { latitude: 37.9785, longitude: 23.7420 }, image: 'https://images.unsplash.com/photo-1501339817302-cd4468881444', rating: "⭐⭐⭐⭐⭐" }
 ];
 
 export default function StudyBrewApp() {
@@ -41,23 +20,36 @@ export default function StudyBrewApp() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0); 
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  
+  // Visibility States
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isChatVisible, setIsChatVisible] = useState(false);
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const [isAccountVisible, setIsAccountVisible] = useState(false);
+  const [isCafesVisible, setIsCafesVisible] = useState(false);
+  
+  // AI States
   const [isThinking, setIsThinking] = useState(false);
   const [chatMessages, setChatMessages] = useState([{ role: 'bot', text: 'Γεια! Πώς μπορώ να βοηθήσω στο διάβασμα;' }]);
   const [inputText, setInputText] = useState('');
+  const [chatSession, setChatSession] = useState<ChatSession | null>(null);
+
+  // Profile data
   const [currentField, setCurrentField] = useState<string>('');
   const [profileData, setProfileData] = useState({ studies: 'Select', level: 'Select', style: 'Select', detail: '' });
   const [interests, setInterests] = useState(['TECH', 'BUSINESS', 'ART']);
   
-  // States για την κράτηση
+  // Reservation states
   const [selectedCafe, setSelectedCafe] = useState<any>(null);
   const [reservationType, setReservationType] = useState<'alone' | 'team' | null>(null);
   const [teamOption, setTeamOption] = useState<'friends' | 'others' | null>(null);
 
-  const [chatSession, setChatSession] = useState<ChatSession | null>(null);
+  // States για την αλλαγή ημερομηνίας/ώρας
+  const [resDate, setResDate] = useState('dd/mm/yy');
+  const [resTime, setResTime] = useState('00:00');
+  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
+  const [isTimePickerVisible, setIsTimePickerVisible] = useState(false);
+
   const fadeAnim = new Animated.Value(0);
 
   useEffect(() => {
@@ -102,13 +94,9 @@ export default function StudyBrewApp() {
     if (!result.canceled) Alert.alert("Success!", "Photo captured!");
   };
 
-  const levelOptions = ['Λύκειο', 'Προπτυχιακός', 'Μεταπτυχιακός', 'Διδακτορικός'];
-  const directionOptions = ['Ανθρωπιστικών Σπουδών', 'Θετικών Σπουδών', 'Σπουδών Υγείας', 'Σπουδών Οικονομίας & Πληροφορικής'];
-  const universityOptions = ['ΕΚΠΑ', 'ΕΜΠ', 'ΟΠΑ', 'ΠΑΠΕΙ', 'ΑΠΘ', 'Πανεπιστήμιο Πατρών', 'Πανεπιστήμιο Ιωαννίνων', 'Πανεπιστήμιο Κρήτης', 'Πανεπιστήμιο Αιγαίου', 'Άλλο'];
-
   const getOptions = () => {
-    if (currentField === 'level') return levelOptions;
-    if (currentField === 'studies') return profileData.level === 'Λύκειο' ? directionOptions : universityOptions;
+    if (currentField === 'level') return ['Λύκειο', 'Προπτυχιακός', 'Μεταπτυχιακός', 'Διδακτορικός'];
+    if (currentField === 'studies') return ['Ανθρωπιστικών', 'Θετικών', 'Υγείας', 'Οικονομίας', 'Άλλο'];
     return ['Hybrid', 'Silent', 'Group Study', 'Café Vibes'];
   };
 
@@ -246,9 +234,14 @@ export default function StudyBrewApp() {
                         </View>
                     )}
 
-                    <Text style={styles.resDateTime}>When: dd/mm/yy</Text>
-                    <Text style={styles.resDateTime}>Time: 00:00</Text>
-                    <TouchableOpacity onPress={() => setSelectedCafe(null)}>
+                    <TouchableOpacity onPress={() => setIsDatePickerVisible(true)}>
+                      <Text style={styles.resDateTime}>When: {resDate}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => setIsTimePickerVisible(true)}>
+                      <Text style={styles.resDateTime}>Time: {resTime}</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity onPress={() => { setSelectedCafe(null); Alert.alert("Confirmed", "Reservation Sent!"); }}>
                         <Text style={styles.resDoneBtn}>DONE</Text>
                     </TouchableOpacity>
                 </View>
@@ -263,8 +256,33 @@ export default function StudyBrewApp() {
         </View>
       )}
 
+      {/* DATE PICKER MODAL */}
+      <Modal visible={isDatePickerVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Set Date</Text>
+            <TextInput style={styles.input} placeholder="dd/mm/yy" onChangeText={setResDate} value={resDate} />
+            <TouchableOpacity style={styles.loginBtn} onPress={() => setIsDatePickerVisible(false)}><Text style={styles.loginBtnText}>OK</Text></TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* TIME PICKER MODAL */}
+      <Modal visible={isTimePickerVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Set Time</Text>
+            <TextInput style={styles.input} placeholder="00:00" onChangeText={setResTime} value={resTime} />
+            <TouchableOpacity style={styles.loginBtn} onPress={() => setIsTimePickerVisible(false)}><Text style={styles.loginBtnText}>OK</Text></TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.navBtn} onPress={() => Alert.alert("Cafes")}><Text style={styles.navIcon}>🏠</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.navBtn} onPress={() => setIsCafesVisible(true)}>
+          <Text style={styles.navIcon}>🏠</Text>
+          <Text style={styles.navLabel}>Cafes</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.navBtn} onPress={openCamera}><Text style={styles.navIcon}>📷</Text></TouchableOpacity>
         <TouchableOpacity style={styles.navBtn} onPress={() => setIsChatVisible(true)}><Text style={styles.navIcon}>🤖</Text></TouchableOpacity>
       </View>
@@ -330,6 +348,24 @@ export default function StudyBrewApp() {
           <TouchableOpacity onPress={() => setIsChatVisible(false)}><Text style={{textAlign:'center', color:'red'}}>Close</Text></TouchableOpacity>
         </View>
       </Modal>
+
+      {/* Cafes Modal */}
+      <Modal visible={isCafesVisible} animationType="slide">
+        <View style={styles.cafesContainer}>
+          <Text style={styles.modalTitle}>Available Cafes</Text>
+          <ScrollView>
+            {Array.from({ length: 10 }).map((_, i) => (
+              <View key={i} style={styles.cafeCard}>
+                {i === 0 && <Text style={{ color: 'red', fontWeight: 'bold' }}>SPONSORED</Text>}
+                <Text style={{ fontSize: 18, fontWeight: 'bold' }}>Coffee Shop {i + 1}</Text>
+                <Text>⭐⭐⭐⭐⭐ - Great for studying!</Text>
+                <Image source={{ uri: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24' }} style={{ height: 100, borderRadius: 10, marginVertical: 5 }} />
+              </View>
+            ))}
+          </ScrollView>
+          <TouchableOpacity onPress={() => setIsCafesVisible(false)}><Text style={{ textAlign: 'center', padding: 20, color: 'red' }}>Close</Text></TouchableOpacity>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -356,7 +392,7 @@ const styles = StyleSheet.create({
   teamOptionsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
   smallOptionBox: { borderWidth: 1, borderColor: '#000', padding: 3, flex: 0.48, alignItems: 'center' },
   smallOptionText: { fontSize: 9, fontWeight: 'bold' },
-  resDateTime: { fontSize: 14, fontWeight: 'bold', marginVertical: 1 },
+  resDateTime: { fontSize: 14, fontWeight: 'bold', marginVertical: 1, color: '#4E342E', textDecorationLine: 'underline' },
   resDoneBtn: { color: '#A52A2A', fontSize: 22, fontWeight: 'bold', textAlign: 'center', textDecorationLine: 'underline' },
   resShopName: { fontWeight: 'bold', fontSize: 14, textAlign: 'center' },
   resImage: { width: '100%', height: 80, borderRadius: 5, marginVertical: 5 },
@@ -364,6 +400,7 @@ const styles = StyleSheet.create({
   footer: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 10, backgroundColor: '#FAF3E0', borderTopWidth: 2, borderTopColor: '#000' },
   navBtn: { alignItems: 'center' },
   navIcon: { fontSize: 35 },
+  navLabel: { fontSize: 12, color: '#4E342E', fontWeight: '500' },
   loginContainer: { flex: 1, backgroundColor: '#FAF3E0', padding: 30, justifyContent: 'center' },
   smallLogo: { width: 200, height: 100, alignSelf: 'center', marginBottom: 20 },
   inputArea: { width: '100%' },
@@ -406,5 +443,7 @@ const styles = StyleSheet.create({
   friendBtn: { borderBottomWidth: 1, borderColor: '#4E342E' },
   friendBtnText: { fontSize: 18, fontWeight: 'bold', color: '#4E342E' },
   editInfoBtn: { borderBottomWidth: 1, borderColor: '#4E342E', alignSelf: 'flex-start' },
-  editInfoText: { fontSize: 18, fontWeight: 'bold', color: '#4E342E' }
+  editInfoText: { fontSize: 18, fontWeight: 'bold', color: '#4E342E' },
+  cafesContainer: { flex: 1, padding: 40, backgroundColor: '#FAF3E0' },
+  cafeCard: { backgroundColor: '#FFF', padding: 15, borderRadius: 10, marginBottom: 15, borderWidth: 1, borderColor: '#D7CCC8' }
 });
