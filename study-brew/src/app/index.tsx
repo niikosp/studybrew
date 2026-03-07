@@ -5,10 +5,8 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { GoogleGenerativeAI, ChatSession } from "@google/generative-ai";
 
-// Αρχικοποίηση AI
 const genAI = new GoogleGenerativeAI("YOUR_API_KEY");
 
-// Ψεύτικα δεδομένα για καφέ - 2 σε κάθε περιοχή της Αθήνας με μοναδικές περιγραφές
 const dummyCafes = [
   { id: 1, name: "Study Grounds", location: "Exarcheia", coords: { latitude: 37.9858, longitude: 23.7355 }, image: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24', rating: "⭐⭐⭐⭐⭐", description: "Minimalist space with specialty coffee and ultra-fast WiFi. Perfect for deep focus." },
   { id: 2, name: "The Bookworm", location: "Exarcheia", coords: { latitude: 37.9840, longitude: 23.7370 }, image: 'https://images.unsplash.com/photo-1481833761820-0509d3217039', rating: "⭐⭐⭐⭐", description: "Surrounded by floor-to-ceiling bookshelves. Offers a very quiet and academic atmosphere." },
@@ -30,27 +28,24 @@ export default function StudyBrewApp() {
   const [onboardingStep, setOnboardingStep] = useState(0); 
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   
-  // Visibility States
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isChatVisible, setIsChatVisible] = useState(false);
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const [isAccountVisible, setIsAccountVisible] = useState(false);
   const [isCafesVisible, setIsCafesVisible] = useState(false);
+  const [isFriendsVisible, setIsFriendsVisible] = useState(false); // NEW
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
   const [isTimePickerVisible, setIsTimePickerVisible] = useState(false);
 
-  // AI States (Διορθώθηκε το isThinking εδώ)
   const [isThinking, setIsThinking] = useState(false); 
   const [chatMessages, setChatMessages] = useState([{ role: 'bot', text: 'Γεια! Πώς μπορώ να βοηθήσω στο διάβασμα;' }]);
   const [inputText, setInputText] = useState('');
   const [chatSession, setChatSession] = useState<ChatSession | null>(null);
 
-  // Profile data
   const [currentField, setCurrentField] = useState<string>('');
   const [profileData, setProfileData] = useState({ studies: 'Select', level: 'Select', style: 'Select', detail: '' });
   const [interests, setInterests] = useState(['TECH', 'BUSINESS', 'ART']);
   
-  // Reservation states
   const [selectedCafe, setSelectedCafe] = useState<any>(null);
   const [reservationType, setReservationType] = useState<'alone' | 'team' | null>(null);
   const [teamOption, setTeamOption] = useState<'friends' | 'others' | null>(null);
@@ -98,7 +93,7 @@ export default function StudyBrewApp() {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
     if (!permissionResult.granted) { Alert.alert("Permission Required"); return; }
     const result = await ImagePicker.launchCameraAsync();
-    if (!result.canceled) Alert.alert("Success!", "Photo captured!");
+    if (!result.canceled) Alert.alert("Success!", "Photo was uploaded!");
   };
 
   const getOptions = () => {
@@ -259,10 +254,41 @@ export default function StudyBrewApp() {
           </View>
           <View style={styles.bioBox}><Text style={styles.bioTitle}>Bio</Text></View>
           <View style={styles.friendActionRow}>
-            <TouchableOpacity style={styles.friendBtn}><Text style={styles.friendBtnText}>My friends🫂</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.friendBtn} onPress={() => setIsFriendsVisible(true)}><Text style={styles.friendBtnText}>My friends🫂</Text></TouchableOpacity>
             <TouchableOpacity style={styles.friendBtn}><Text style={styles.friendBtnText}>🔍 Find more friends</Text></TouchableOpacity>
           </View>
           <TouchableOpacity style={styles.editInfoBtn}><Text style={styles.editInfoText}>Edit personal info</Text></TouchableOpacity>
+        </View>
+      </Modal>
+
+      <Modal visible={isFriendsVisible} animationType="slide">
+        <View style={[styles.accountContainer, { backgroundColor: '#C8A276' }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 30 }}>
+            <Text style={[styles.accountTitle, { marginBottom: 0 }]}>My friends</Text>
+            <Text style={{ fontSize: 35, marginLeft: 10 }}>🫂</Text>
+          </View>
+          <ScrollView>
+            {[
+              { name: 'Elenigeo', img: 'https://i.pravatar.cc/150?u=eleni' },
+              { name: 'Nefeliim', img: 'https://i.pravatar.cc/150?u=nefeli' },
+              { name: 'Stefoikonomou', img: 'https://i.pravatar.cc/150?u=stefos' },
+              { name: 'papanikk', img: 'https://i.pravatar.cc/150?u=pnikk' },
+              { name: 'Dimppdp', img: 'https://i.pravatar.cc/150?u=dim' }
+            ].map((friend, i) => (
+              <View key={i} style={styles.friendRowItem}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Image source={{ uri: friend.img }} style={styles.friendAvatar} />
+                    <Text style={styles.friendNameText}>{friend.name}</Text>
+                </View>
+                <TouchableOpacity>
+                    <Text style={{ fontSize: 30 }}>💬</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </ScrollView>
+          <TouchableOpacity onPress={() => setIsFriendsVisible(false)} style={{ marginTop: 20 }}>
+            <Text style={{ textAlign: 'center', fontSize: 20, fontWeight: 'bold', color: '#4E342E' }}>Close</Text>
+          </TouchableOpacity>
         </View>
       </Modal>
 
@@ -375,6 +401,9 @@ const styles = StyleSheet.create({
   friendActionRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 40 },
   friendBtn: { borderBottomWidth: 1, borderColor: '#4E342E' },
   friendBtnText: { fontSize: 18, fontWeight: 'bold', color: '#4E342E' },
+  friendRowItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginVertical: 10 },
+  friendAvatar: { width: 60, height: 60, borderRadius: 30, marginRight: 15 },
+  friendNameText: { fontSize: 20, fontWeight: 'bold', color: '#4E342E', textDecorationLine: 'underline' },
   editInfoBtn: { borderBottomWidth: 1, borderColor: '#4E342E', alignSelf: 'flex-start' },
   editInfoText: { fontSize: 18, fontWeight: 'bold', color: '#4E342E' },
   cafesContainer: { flex: 1, padding: 40, backgroundColor: '#FAF3E0' },
