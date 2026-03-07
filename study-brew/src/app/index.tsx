@@ -10,10 +10,11 @@ export default function StudyBrewApp() {
   const [onboardingStep, setOnboardingStep] = useState(0); 
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   
+  
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [currentField, setCurrentField] = useState('');
   const [profileData, setProfileData] = useState({ studies: 'Select', level: 'Select', style: 'Select', detail: '' });
-  const [interests, setInterests] = useState(['TECH', 'SELECT', 'SELECT']);
+  const [interests, setInterests] = useState(['TECH', 'BUSINESS', 'ART']);
 
   const fadeAnim = new Animated.Value(0);
 
