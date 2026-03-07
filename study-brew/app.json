@@ -41,6 +41,13 @@
           "photosPermission": "Allow Study Brew to access your photos.",
           "cameraPermission": "Allow Study Brew to take photos of cafes."
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysPermission": "Allow Study Brew to find study spots near you.",
+          "locationWhenInUsePermission": "Allow Study Brew to find study spots near you."
+        }
       ]
     ],
     "experiments": {
