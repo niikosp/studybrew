@@ -8,11 +8,20 @@ import { GoogleGenerativeAI, ChatSession } from "@google/generative-ai";
 // Αρχικοποίηση AI
 const genAI = new GoogleGenerativeAI("YOUR_API_KEY");
 
-// Ψεύτικα δεδομένα για καφέ
+// Ψεύτικα δεδομένα για καφέ - 2 σε κάθε περιοχή της Αθήνας με μοναδικές περιγραφές
 const dummyCafes = [
-  { id: 1, name: "Study Grounds", location: "Exarcheia", coords: { latitude: 37.9858, longitude: 23.7355 }, image: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24', rating: "⭐⭐⭐⭐⭐" },
-  { id: 2, name: "The Library Cafe", location: "Syntagma", coords: { latitude: 37.9755, longitude: 23.7348 }, image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085', rating: "⭐⭐⭐⭐" },
-  { id: 3, name: "Brew & Book", location: "Kolonaki", coords: { latitude: 37.9785, longitude: 23.7420 }, image: 'https://images.unsplash.com/photo-1501339817302-cd4468881444', rating: "⭐⭐⭐⭐⭐" }
+  { id: 1, name: "Study Grounds", location: "Exarcheia", coords: { latitude: 37.9858, longitude: 23.7355 }, image: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24', rating: "⭐⭐⭐⭐⭐", description: "Minimalist space with specialty coffee and ultra-fast WiFi. Perfect for deep focus." },
+  { id: 2, name: "The Bookworm", location: "Exarcheia", coords: { latitude: 37.9840, longitude: 23.7370 }, image: 'https://images.unsplash.com/photo-1481833761820-0509d3217039', rating: "⭐⭐⭐⭐", description: "Surrounded by floor-to-ceiling bookshelves. Offers a very quiet and academic atmosphere." },
+  { id: 3, name: "The Library Cafe", location: "Syntagma", coords: { latitude: 37.9755, longitude: 23.7348 }, image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085', rating: "⭐⭐⭐⭐", description: "An elegant classic spot in the heart of the city with large windows and comfortable armchairs." },
+  { id: 4, name: "Syntagma Brew", location: "Syntagma", coords: { latitude: 37.9765, longitude: 23.7320 }, image: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93', rating: "⭐⭐⭐⭐⭐", description: "Modern vibes with a view. Plentiful power outlets and great artisan pastries." },
+  { id: 5, name: "Quiet Corner", location: "Pangrati", coords: { latitude: 37.9650, longitude: 23.7480 }, image: 'https://images.unsplash.com/photo-1453614512568-c4024d13c247', rating: "⭐⭐⭐⭐⭐", description: "Cozy neighborhood gem with amazing homemade cookies and a zero-noise policy upstairs." },
+  { id: 6, name: "The Roast", location: "Pangrati", coords: { latitude: 37.9675, longitude: 23.7455 }, image: 'https://images.unsplash.com/photo-1521017432531-fbd92d768814', rating: "⭐⭐⭐⭐", description: "Energetic atmosphere with industrial decor. Famous for its cold brew and upbeat study music." },
+  { id: 7, name: "Uni-Coffee", location: "Zografou", coords: { latitude: 37.9740, longitude: 23.7670 }, image: 'https://images.unsplash.com/photo-1511920170033-f8396924c348', rating: "⭐⭐⭐⭐⭐", description: "The ultimate student hub near campus. Features group study tables and student-friendly prices." },
+  { id: 8, name: "Brew & Book", location: "Zografou", coords: { latitude: 37.9725, longitude: 23.7710 }, image: 'https://images.unsplash.com/photo-1501339817302-cd4468881444', rating: "⭐⭐⭐⭐⭐", description: "Peaceful garden for outdoor reading and a strictly quiet indoor zone for exam seasons." },
+  { id: 9, name: "Fokionos Study", location: "Kypseli", coords: { latitude: 38.0010, longitude: 23.7380 }, image: 'https://images.unsplash.com/photo-1559925393-8be0ec41b504', rating: "⭐⭐⭐⭐", description: "Classic Kypseli vibes with wide wooden tables and excellent natural lighting for reading." },
+  { id: 10, name: "The Urban Roast", location: "Kypseli", coords: { latitude: 37.9985, longitude: 23.7415 }, image: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd', rating: "⭐⭐⭐⭐⭐", description: "Hidden rooftop gem with panoramic views. Quiet enough for serious thesis writing." },
+  { id: 11, name: "Port Side Study", location: "Piraeus", coords: { latitude: 37.9475, longitude: 23.6460 }, image: 'https://images.unsplash.com/photo-1442512595331-e89e73853f31', rating: "⭐⭐⭐⭐⭐", description: "Spacious area near the university harbor. Excellent ventilation and plenty of desk space." },
+  { id: 12, name: "Harbor Brew", location: "Piraeus", coords: { latitude: 37.9430, longitude: 23.6485 }, image: 'https://images.unsplash.com/photo-1559496417-e7f25cb247f3', rating: "⭐⭐⭐⭐", description: "Loft-style cafe with private study booths and high-quality Greek herbal teas." }
 ];
 
 export default function StudyBrewApp() {
@@ -21,34 +30,27 @@ export default function StudyBrewApp() {
   const [onboardingStep, setOnboardingStep] = useState(0); 
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   
-  // Visibility States
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isChatVisible, setIsChatVisible] = useState(false);
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const [isAccountVisible, setIsAccountVisible] = useState(false);
   const [isCafesVisible, setIsCafesVisible] = useState(false);
-  
-  // AI States
-  const [isThinking, setIsThinking] = useState(false);
+  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
+  const [isTimePickerVisible, setIsTimePickerVisible] = useState(false);
+
   const [chatMessages, setChatMessages] = useState([{ role: 'bot', text: 'Γεια! Πώς μπορώ να βοηθήσω στο διάβασμα;' }]);
   const [inputText, setInputText] = useState('');
   const [chatSession, setChatSession] = useState<ChatSession | null>(null);
 
-  // Profile data
   const [currentField, setCurrentField] = useState<string>('');
   const [profileData, setProfileData] = useState({ studies: 'Select', level: 'Select', style: 'Select', detail: '' });
   const [interests, setInterests] = useState(['TECH', 'BUSINESS', 'ART']);
   
-  // Reservation states
   const [selectedCafe, setSelectedCafe] = useState<any>(null);
   const [reservationType, setReservationType] = useState<'alone' | 'team' | null>(null);
   const [teamOption, setTeamOption] = useState<'friends' | 'others' | null>(null);
-
-  // States για την αλλαγή ημερομηνίας/ώρας
   const [resDate, setResDate] = useState('dd/mm/yy');
   const [resTime, setResTime] = useState('00:00');
-  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
-  const [isTimePickerVisible, setIsTimePickerVisible] = useState(false);
 
   const fadeAnim = new Animated.Value(0);
 
@@ -173,8 +175,8 @@ export default function StudyBrewApp() {
         initialRegion={{ 
             latitude: location?.coords.latitude || 37.9838, 
             longitude: location?.coords.longitude || 23.7275, 
-            latitudeDelta: 0.05, 
-            longitudeDelta: 0.05 
+            latitudeDelta: 0.1, 
+            longitudeDelta: 0.1 
         }} 
         onPress={() => {
             setSelectedCafe(null);
@@ -354,16 +356,20 @@ export default function StudyBrewApp() {
         <View style={styles.cafesContainer}>
           <Text style={styles.modalTitle}>Available Cafes</Text>
           <ScrollView>
-            {Array.from({ length: 10 }).map((_, i) => (
-              <View key={i} style={styles.cafeCard}>
-                {i === 0 && <Text style={{ color: 'red', fontWeight: 'bold' }}>SPONSORED</Text>}
-                <Text style={{ fontSize: 18, fontWeight: 'bold' }}>Coffee Shop {i + 1}</Text>
-                <Text>⭐⭐⭐⭐⭐ - Great for studying!</Text>
-                <Image source={{ uri: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24' }} style={{ height: 100, borderRadius: 10, marginVertical: 5 }} />
+            {dummyCafes.map((cafe) => (
+              <View key={cafe.id} style={styles.cafeCard}>
+                {cafe.id === 1 && <Text style={{ color: 'red', fontWeight: 'bold' }}>SPONSORED</Text>}
+                <Text style={{ fontSize: 18, fontWeight: 'bold' }}>{cafe.name}</Text>
+                <Text style={{ fontStyle: 'italic', color: '#555', marginBottom: 5 }}>{cafe.description}</Text>
+                <Text>Rating: {cafe.rating}</Text>
+                <Image source={{ uri: cafe.image }} style={{ height: 120, borderRadius: 10, marginVertical: 10 }} />
+                <TouchableOpacity style={styles.loginBtn} onPress={() => { setSelectedCafe(cafe); setIsCafesVisible(false); }}>
+                  <Text style={styles.loginBtnText}>Reserve Now</Text>
+                </TouchableOpacity>
               </View>
             ))}
           </ScrollView>
-          <TouchableOpacity onPress={() => setIsCafesVisible(false)}><Text style={{ textAlign: 'center', padding: 20, color: 'red' }}>Close</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => setIsCafesVisible(false)}><Text style={{ textAlign: 'center', padding: 20, color: 'red', fontSize: 18 }}>Close</Text></TouchableOpacity>
         </View>
       </Modal>
     </View>
