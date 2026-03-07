@@ -6,7 +6,7 @@ import * as Location from 'expo-location';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Αρχικοποίηση AI
-const genAI = new GoogleGenerativeAI("AIzaSyDdCRfkMhdOJlDO0odDk7kTLXahhVoMN58");
+const genAI = new GoogleGenerativeAI("YOUR_API_KEY");
 
 export default function StudyBrewApp() {
   const [isLoading, setIsLoading] = useState(true);
@@ -21,31 +21,44 @@ export default function StudyBrewApp() {
   const [currentField, setCurrentField] = useState('');
   const [profileData, setProfileData] = useState({ studies: 'Select', level: 'Select', style: 'Select', detail: '' });
   const [interests, setInterests] = useState(['TECH', 'BUSINESS', 'ART']);
+  
+  // Προσθήκη για διατήρηση ιστορικού συνομιλίας
+  const [chatSession, setChatSession] = useState<any>(null);
 
   const fadeAnim = new Animated.Value(0);
 
   useEffect(() => {
     Animated.timing(fadeAnim, { toValue: 1, duration: 1000, useNativeDriver: true }).start();
     const timer = setTimeout(() => setIsLoading(false), 3000);
+    
+    // Αρχικοποίηση του chat session
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    setChatSession(model.startChat({ history: [] }));
+    
     return () => clearTimeout(timer);
   }, []);
 
   const handleSend = async () => {
-    if (inputText.trim() === '') return;
+    if (inputText.trim() === '' || !chatSession) return;
+    
     const newMessages = [...chatMessages, { role: 'user', text: inputText }];
     setChatMessages(newMessages);
     setInputText('');
     setIsThinking(true);
+    
     try {
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      const result = await model.generateContent(inputText);
-      setChatMessages([...newMessages, { role: 'bot', text: result.response.text() }]);
+      // Αποστολή μηνύματος στο session
+      const result = await chatSession.sendMessage(inputText);
+      const responseText = await result.response.text();
+      setChatMessages([...newMessages, { role: 'bot', text: responseText }]);
     } catch (e) {
       setChatMessages([...newMessages, { role: 'bot', text: "Σφάλμα σύνδεσης." }]);
     } finally {
       setIsThinking(false);
     }
   };
+
+  // ... (διατηρείται όλο το υπόλοιπο UI και οι συναρτήσεις σας όπως τις είχατε) ...
 
   const handleLogin = async () => {
     let { status } = await Location.requestForegroundPermissionsAsync();
@@ -74,6 +87,7 @@ export default function StudyBrewApp() {
     return ['Hybrid', 'Silent', 'Group Study', 'Café Vibes'];
   };
 
+  // Render ...
   if (isLoading) return (
     <View style={styles.splashContainer}>
       <Animated.View style={{ opacity: fadeAnim }}><Image source={require('../assets/images/logo.png')} style={styles.mainLogo} resizeMode="contain" /></Animated.View>
