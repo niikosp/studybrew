@@ -3,15 +3,21 @@ import { StyleSheet, Text, View, Image, TextInput, TouchableOpacity, ActivityInd
 import MapView from 'react-native-maps';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+// Αρχικοποίηση AI
+const genAI = new GoogleGenerativeAI("AIzaSyDdCRfkMhdOJlDO0odDk7kTLXahhVoMN58");
 
 export default function StudyBrewApp() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0); 
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
-  
-  
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isChatVisible, setIsChatVisible] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
+  const [chatMessages, setChatMessages] = useState([{ role: 'bot', text: 'Γεια! Πώς μπορώ να βοηθήσω στο διάβασμα;' }]);
+  const [inputText, setInputText] = useState('');
   const [currentField, setCurrentField] = useState('');
   const [profileData, setProfileData] = useState({ studies: 'Select', level: 'Select', style: 'Select', detail: '' });
   const [interests, setInterests] = useState(['TECH', 'BUSINESS', 'ART']);
@@ -23,6 +29,23 @@ export default function StudyBrewApp() {
     const timer = setTimeout(() => setIsLoading(false), 3000);
     return () => clearTimeout(timer);
   }, []);
+
+  const handleSend = async () => {
+    if (inputText.trim() === '') return;
+    const newMessages = [...chatMessages, { role: 'user', text: inputText }];
+    setChatMessages(newMessages);
+    setInputText('');
+    setIsThinking(true);
+    try {
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const result = await model.generateContent(inputText);
+      setChatMessages([...newMessages, { role: 'bot', text: result.response.text() }]);
+    } catch (e) {
+      setChatMessages([...newMessages, { role: 'bot', text: "Σφάλμα σύνδεσης." }]);
+    } finally {
+      setIsThinking(false);
+    }
+  };
 
   const handleLogin = async () => {
     let { status } = await Location.requestForegroundPermissionsAsync();
@@ -36,10 +59,7 @@ export default function StudyBrewApp() {
 
   const openCamera = async () => {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permissionResult.granted) {
-      Alert.alert("Permission Required", "You need to allow camera access!");
-      return;
-    }
+    if (!permissionResult.granted) { Alert.alert("Permission Required"); return; }
     const result = await ImagePicker.launchCameraAsync();
     if (!result.canceled) Alert.alert("Success!", "Photo captured!");
   };
@@ -96,10 +116,7 @@ export default function StudyBrewApp() {
   if (onboardingStep === 2) return (
     <View style={styles.loginContainer}>
       <Text style={styles.welcomeText}>Finish your profile</Text>
-      <TouchableOpacity style={styles.photoContainer} onPress={openCamera}>
-        <Text style={styles.placeholderIcon}>👤</Text>
-        <Text style={styles.addPhotoText}>Add photo!</Text>
-      </TouchableOpacity>
+      <TouchableOpacity style={styles.photoContainer} onPress={openCamera}><Text style={styles.placeholderIcon}>👤</Text><Text style={styles.addPhotoText}>Add photo!</Text></TouchableOpacity>
       <TextInput style={styles.bioInput} placeholder="Bio..." multiline placeholderTextColor="#A1887F" />
       <Text style={styles.label}>Find study spots near me!</Text>
       <TouchableOpacity style={styles.locationBtn} onPress={handleLogin}><Text style={{color: '#4E342E'}}>share your location</Text></TouchableOpacity>
@@ -110,25 +127,28 @@ export default function StudyBrewApp() {
   return (
     <View style={styles.mainContainer}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => Alert.alert("Settings", "Account settings coming soon!")}><Text style={styles.headerText}>⚙️ Settings</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => Alert.alert("Settings")}><Text style={styles.headerText}>⚙️ Settings</Text></TouchableOpacity>
         <Image source={{ uri: 'https://i.pravatar.cc/100' }} style={styles.profilePic} />
       </View>
-      <MapView 
-        style={styles.map} 
-        showsUserLocation={true}
-        followsUserLocation={true}
-        initialRegion={{
-          latitude: location?.coords.latitude || 37.9838,
-          longitude: location?.coords.longitude || 23.7275,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05
-        }} 
-      />
+      <MapView style={styles.map} showsUserLocation={true} followsUserLocation={true} initialRegion={{ latitude: location?.coords.latitude || 37.9838, longitude: location?.coords.longitude || 23.7275, latitudeDelta: 0.05, longitudeDelta: 0.05 }} />
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.navBtn} onPress={() => Alert.alert("Cafes", "Finding nearby study spots...")}><Text style={styles.navIcon}>☕</Text><Text style={styles.navLabel}>Cafes</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.navBtn} onPress={() => Alert.alert("Cafes")}><Text style={styles.navIcon}>☕</Text><Text style={styles.navLabel}>Cafes</Text></TouchableOpacity>
         <TouchableOpacity style={styles.navBtn} onPress={openCamera}><Text style={styles.navIcon}>📷</Text><Text style={styles.navLabel}>Post</Text></TouchableOpacity>
-        <TouchableOpacity style={styles.navBtn} onPress={() => Alert.alert("Study AI", "How can I help you study today?")}><Text style={styles.navIcon}>🤖</Text><Text style={styles.navLabel}>AI Chat</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.navBtn} onPress={() => setIsChatVisible(true)}><Text style={styles.navIcon}>🤖</Text><Text style={styles.navLabel}>AI Chat</Text></TouchableOpacity>
       </View>
+      
+      <Modal visible={isChatVisible} animationType="slide">
+        <View style={styles.chatContainer}>
+          <Text style={styles.modalTitle}>Study AI Assistant</Text>
+          <ScrollView style={{flex: 1}}>{chatMessages.map((m, i) => <Text key={i} style={m.role === 'user' ? styles.userMsg : styles.botMsg}>{m.text}</Text>)}</ScrollView>
+          {isThinking && <ActivityIndicator />}
+          <View style={styles.inputRow}>
+            <TextInput style={styles.chatInput} value={inputText} onChangeText={setInputText} placeholder="Type..." />
+            <TouchableOpacity onPress={handleSend}><Text style={{fontWeight:'bold'}}>Send</Text></TouchableOpacity>
+          </View>
+          <TouchableOpacity onPress={() => setIsChatVisible(false)}><Text style={{textAlign:'center', color:'red'}}>Close</Text></TouchableOpacity>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -157,9 +177,15 @@ const styles = StyleSheet.create({
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
   modalContent: { backgroundColor: '#FFF', padding: 20, borderRadius: 15, maxHeight: '80%' },
   modalItem: { padding: 15, fontSize: 18, borderBottomWidth: 1, borderColor: '#EEE', textAlign: 'center' },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', textAlign: 'center', marginBottom: 20 },
   photoContainer: { alignItems: 'center', marginBottom: 20 },
   placeholderIcon: { fontSize: 80, color: '#4E342E' },
   addPhotoText: { fontSize: 16, fontWeight: '600', color: '#4E342E' },
   bioInput: { backgroundColor: '#FFF', padding: 15, borderRadius: 10, height: 100, textAlignVertical: 'top', marginBottom: 20, borderWidth: 1, borderColor: '#D7CCC8' },
-  locationBtn: { backgroundColor: '#FFF', padding: 15, borderRadius: 25, alignItems: 'center', borderWidth: 1, borderColor: '#4E342E', marginBottom: 20 }
+  locationBtn: { backgroundColor: '#FFF', padding: 15, borderRadius: 25, alignItems: 'center', borderWidth: 1, borderColor: '#4E342E', marginBottom: 20 },
+  chatContainer: { flex: 1, padding: 40, backgroundColor: '#FAF3E0' },
+  userMsg: { alignSelf: 'flex-end', backgroundColor: '#4E342E', color: '#FFF', padding: 10, borderRadius: 10, margin: 5 },
+  botMsg: { alignSelf: 'flex-start', backgroundColor: '#FFF', padding: 10, borderRadius: 10, margin: 5 },
+  inputRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
+  chatInput: { flex: 1, borderWidth: 1, borderColor: '#D7CCC8', borderRadius: 20, padding: 10, marginRight: 10 }
 });
