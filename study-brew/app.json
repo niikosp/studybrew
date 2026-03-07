@@ -1,0 +1,51 @@
+{
+  "expo": {
+    "name": "study-brew",
+    "slug": "study-brew",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./src/assets/images/logo.png",
+    "scheme": "studybrew",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "icon": "./src/assets/images/logo.png"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#C8A276",
+        "foregroundImage": "./src/assets/images/logo.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./src/assets/images/logo.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#C8A276",
+          "android": {
+            "image": "./src/assets/images/logo.png",
+            "imageWidth": 76
+          }
+        }
+      ],
+      "expo-font",
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Study Brew to access your photos.",
+          "cameraPermission": "Allow Study Brew to take photos of cafes."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
