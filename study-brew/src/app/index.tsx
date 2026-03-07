@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, Image, TextInput, TouchableOpacity, ActivityIndicator, Animated, Alert, Modal } from 'react-native';
+import { StyleSheet, Text, View, Image, TextInput, TouchableOpacity, ActivityIndicator, Animated, Alert, Modal, ScrollView } from 'react-native';
 import MapView from 'react-native-maps';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
@@ -10,10 +10,9 @@ export default function StudyBrewApp() {
   const [isProfileComplete, setIsProfileComplete] = useState(false);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   
-  // Νέα states για το Profile
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [currentField, setCurrentField] = useState('');
-  const [profileData, setProfileData] = useState({ studies: 'Select', level: 'Select', style: 'Select' });
+  const [profileData, setProfileData] = useState({ studies: 'Select', level: 'Select', style: 'Select', detail: '' });
   const [interests, setInterests] = useState(['TECH', 'SELECT', 'SELECT']);
 
   const fadeAnim = new Animated.Value(0);
@@ -35,17 +34,27 @@ export default function StudyBrewApp() {
 
   const openCamera = async () => {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-    if (permissionResult.granted === false) {
+    if (!permissionResult.granted) {
       Alert.alert("Permission Required", "You need to allow camera access!");
       return;
     }
     const result = await ImagePicker.launchCameraAsync();
-    if (!result.canceled) {
-      Alert.alert("Success!", "Photo captured for Study Brew!");
-    }
+    if (!result.canceled) Alert.alert("Success!", "Photo captured!");
   };
 
-  // 1. SPLASH
+  // --- Δυναμικές Λίστες ---
+  const levelOptions = ['Λύκειο', 'Προπτυχιακός', 'Μεταπτυχιακός', 'Διδακτορικός'];
+  const directionOptions = ['Ανθρωπιστικών Σπουδών', 'Θετικών Σπουδών', 'Σπουδών Υγείας', 'Σπουδών Οικονομίας & Πληροφορικής'];
+  const universityOptions = ['ΕΚΠΑ', 'ΕΜΠ', 'ΟΠΑ', 'ΠΑΠΕΙ', 'ΑΠΘ', 'Πανεπιστήμιο Πατρών', 'Πανεπιστήμιο Ιωαννίνων', 'Πανεπιστήμιο Κρήτης', 'Πανεπιστήμιο Αιγαίου', 'Άλλο'];
+
+  const getOptions = () => {
+    if (currentField === 'level') return levelOptions;
+    if (currentField === 'studies') {
+      return profileData.level === 'Λύκειο' ? directionOptions : universityOptions;
+    }
+    return ['Hybrid', 'Silent', 'Group Study', 'Café Vibes'];
+  };
+
   if (isLoading) {
     return (
       <View style={styles.splashContainer}>
@@ -57,7 +66,6 @@ export default function StudyBrewApp() {
     );
   }
 
-  // 2. LOGIN
   if (!isLoggedIn) {
     return (
       <View style={styles.loginContainer}>
@@ -74,27 +82,34 @@ export default function StudyBrewApp() {
     );
   }
 
-  // 3. PROFILE SCREEN
   if (!isProfileComplete) {
     return (
       <View style={styles.loginContainer}>
         <Text style={styles.welcomeText}>Brew your profile!</Text>
         
-        <Text style={styles.label}>Studies:</Text>
-        <TouchableOpacity style={styles.input} onPress={() => { setCurrentField('studies'); setIsModalVisible(true); }}>
-          <Text>{profileData.studies}</Text>
-        </TouchableOpacity>
-
         <Text style={styles.label}>Level:</Text>
         <TouchableOpacity style={styles.input} onPress={() => { setCurrentField('level'); setIsModalVisible(true); }}>
           <Text>{profileData.level}</Text>
         </TouchableOpacity>
 
+        <Text style={styles.label}>{profileData.level === 'Λύκειο' ? 'Studies:' : 'University:'}</Text>
+        <TouchableOpacity style={styles.input} onPress={() => { setCurrentField('studies'); setIsModalVisible(true); }}>
+          <Text>{profileData.studies}</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.label}>{profileData.level === 'Λύκειο' ? 'School:' : 'Department:'}</Text>
+        <TextInput 
+          style={styles.input} 
+          placeholder={profileData.level === 'Λύκειο' ? "e.g. 1st High School" : "e.g. Computer Science"} 
+          placeholderTextColor="#A1887F"
+          onChangeText={(val) => setProfileData({...profileData, detail: val})}
+        />
+
         <Text style={styles.label}>Interests:</Text>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
           {interests.map((i, idx) => (
             <TouchableOpacity key={idx} style={styles.interestBtn}>
-              <Text style={{fontSize: 10}}>{i}</Text>
+              <Text style={{fontSize: 10, fontWeight: 'bold'}}>{i}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -108,17 +123,27 @@ export default function StudyBrewApp() {
           <Text style={styles.loginBtnText}>next</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity style={styles.backBtn} onPress={() => setIsLoggedIn(false)}>
+          <Text style={styles.backBtnText}>← Back to Login</Text>
+        </TouchableOpacity>
+
         <Modal visible={isModalVisible} transparent animationType="slide">
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              {['Undergraduate', 'Postgraduate', 'PhD', 'Research'].map((item) => (
-                <TouchableOpacity key={item} onPress={() => {
-                  setProfileData({...profileData, [currentField]: item});
-                  setIsModalVisible(false);
-                }}>
-                  <Text style={styles.modalItem}>{item}</Text>
-                </TouchableOpacity>
-              ))}
+              <Text style={styles.modalTitle}>Select {currentField}</Text>
+              <ScrollView>
+                {getOptions().map((item) => (
+                  <TouchableOpacity key={item} onPress={() => {
+                    setProfileData({...profileData, [currentField]: item});
+                    setIsModalVisible(false);
+                  }}>
+                    <Text style={styles.modalItem}>{item}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+              <TouchableOpacity onPress={() => setIsModalVisible(false)} style={{marginTop: 10, alignSelf: 'center'}}>
+                <Text style={{color: 'red'}}>Close</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </Modal>
@@ -126,7 +151,6 @@ export default function StudyBrewApp() {
     );
   }
 
-  // 4. MAIN SCREEN
   return (
     <View style={styles.mainContainer}>
       <View style={styles.header}>
@@ -181,13 +205,16 @@ const styles = StyleSheet.create({
   loginContainer: { flex: 1, backgroundColor: '#FAF3E0', padding: 30, justifyContent: 'center' },
   smallLogo: { width: 200, height: 100, alignSelf: 'center', marginBottom: 20 },
   inputArea: { width: '100%' },
-  welcomeText: { fontSize: 20, fontWeight: '700', color: '#4E342E', marginBottom: 20, textAlign: 'center' },
-  input: { backgroundColor: '#FFF', padding: 15, borderRadius: 10, marginBottom: 15, borderWidth: 1, borderColor: '#D7CCC8' },
+  welcomeText: { fontSize: 22, fontWeight: '700', color: '#4E342E', marginBottom: 25, textAlign: 'center' },
+  label: { fontSize: 16, fontWeight: '600', color: '#4E342E', marginBottom: 5 },
+  input: { backgroundColor: '#FFF', padding: 15, borderRadius: 10, marginBottom: 15, borderWidth: 1, borderColor: '#D7CCC8', justifyContent: 'center' },
   loginBtn: { backgroundColor: '#4E342E', padding: 18, borderRadius: 10, alignItems: 'center', marginTop: 10 },
   loginBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
-  label: { fontSize: 16, fontWeight: '600', color: '#4E342E', marginBottom: 5 },
   interestBtn: { backgroundColor: '#FFF', padding: 10, borderRadius: 20, borderWidth: 1, borderColor: '#D7CCC8', width: '30%', alignItems: 'center' },
+  backBtn: { marginTop: 15, alignSelf: 'center' },
+  backBtnText: { color: '#4E342E', fontSize: 14, textDecorationLine: 'underline' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
-  modalContent: { backgroundColor: '#FFF', padding: 20, borderRadius: 10 },
-  modalItem: { padding: 15, fontSize: 18, borderBottomWidth: 1, borderColor: '#EEE' },
+  modalContent: { backgroundColor: '#FFF', padding: 20, borderRadius: 15, maxHeight: '80%' },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15, color: '#4E342E', textAlign: 'center' },
+  modalItem: { padding: 15, fontSize: 18, borderBottomWidth: 1, borderColor: '#EEE', textAlign: 'center' },
 });
