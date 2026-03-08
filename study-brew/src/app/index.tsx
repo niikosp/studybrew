@@ -79,23 +79,32 @@ export default function StudyBrewApp() {
     return () => clearTimeout(timer);
   }, []);
 
-  const handleSend = async () => {
-    if (inputText.trim() === '' || !chatSession) return;
-    const newMessages = [...chatMessages, { role: 'user', text: inputText }];
-    setChatMessages(newMessages);
-    setInputText('');
-    setIsThinking(true);
-    try {
-      const result = await chatSession.sendMessage(inputText);
-      const responseText = await result.response.text();
-      setChatMessages([...newMessages, { role: 'bot', text: responseText }]);
-    } catch (e) {
-      setChatMessages([...newMessages, { role: 'bot', text: "Σφάλμα σύνδεσης." }]);
-    } finally {
-      setIsThinking(false);
-    }
-  };
+  const hardcodedAnswer = `Οι αλγόριθμοι στα διακριτά μαθηματικά είναι βήμα-προς-βήμα διαδικασίες που χρησιμοποιούνται για την επίλυση προβλημάτων τα οποία βασίζονται σε διακριτές δομές, όπως σύνολα, γράφους, ακολουθίες και λογικές προτάσεις. Ένας αλγόριθμος αποτελείται από μια πεπερασμένη σειρά οδηγιών που εκτελούνται με συγκεκριμένη σειρά ώστε να οδηγήσουν σε ένα αποτέλεσμα.
 
+Στα διακριτά μαθηματικά οι αλγόριθμοι χρησιμοποιούνται για πολλές διαφορετικές εφαρμογές. Για παράδειγμα, υπάρχουν αλγόριθμοι που βρίσκουν το μικρότερο κοινό πολλαπλάσιο ή τον μέγιστο κοινό διαιρέτη δύο αριθμών, όπως ο γνωστός αλγόριθμος του Ευκλείδη.
+
+Ένα σημαντικό χαρακτηριστικό των αλγορίθμων είναι η πολυπλοκότητα τους, δηλαδή πόσος χρόνος και πόση μνήμη απαιτείται για την εκτέλεση τους καθώς αυξάνεται το μέγεθος της εισόδου.`;
+
+const handleSend = () => {
+  if (inputText.trim() === '') return;
+
+  const newMessages = [...chatMessages, { role: 'user', text: inputText }];
+  setChatMessages(newMessages);
+  setInputText('');
+
+  // εμφανίζεται "Thinking..."
+  setChatMessages([...newMessages, { role: 'bot', text: "Thinking..." }]);
+
+  setTimeout(() => {
+    let response = "Δεν υπάρχει διαθέσιμη απάντηση.";
+
+    if (inputText.toLowerCase().includes("αλγοριθ")) {
+      response = hardcodedAnswer;
+    }
+
+    setChatMessages([...newMessages, { role: 'bot', text: response }]);
+  }, 3000);
+};
   const handleLogin = async () => {
     let { status } = await Location.requestForegroundPermissionsAsync();
     if (status === 'granted') {
