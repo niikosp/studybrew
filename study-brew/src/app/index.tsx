@@ -5,8 +5,19 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { GoogleGenerativeAI, ChatSession } from "@google/generative-ai";
 
-const genAI = new GoogleGenerativeAI("YOUR_API_KEY");
+// Αρχικοποίηση AI
+const genAI = new GoogleGenerativeAI("AIzaSyCkYyZMdxA45jT2rrAfRdgTl2aCp2DULWY");
 
+// Λίστες για Πανεπιστήμια και Κατευθύνσεις
+const greekUniversities = [
+  'ΕΚΠΑ', 'ΕΜΠ', 'ΟΠΑ', 'ΠΑΠΕΙ', 'Πάντειο', 'Γεωπονικό', 'ΑΠΘ', 'ΠΑΜΑΚ', 'Παν. Πατρών', 'Παν. Κρήτης', 'ΔΠΘ', 'Παν. Ιωαννίνων'
+];
+
+const highSchoolDirections = [
+  'Ανθρωπιστικών Σπουδών', 'Θετικών Σπουδών', 'Σπουδών Υγείας', 'Σπουδών Οικονομίας & Πληροφορικής'
+];
+
+// Ψεύτικα δεδομένα για καφέ
 const dummyCafes = [
   { id: 1, name: "Study Grounds", location: "Exarcheia", coords: { latitude: 37.9858, longitude: 23.7355 }, image: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24', rating: "⭐⭐⭐⭐⭐", description: "Minimalist space with specialty coffee and ultra-fast WiFi. Perfect for deep focus." },
   { id: 2, name: "The Bookworm", location: "Exarcheia", coords: { latitude: 37.9840, longitude: 23.7370 }, image: 'https://images.unsplash.com/photo-1481833761820-0509d3217039', rating: "⭐⭐⭐⭐", description: "Surrounded by floor-to-ceiling bookshelves. Offers a very quiet and academic atmosphere." },
@@ -25,32 +36,38 @@ const dummyCafes = [
 export default function StudyBrewApp() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [onboardingStep, setOnboardingStep] = useState(0); 
-  const [location, setLocation] = useState<Location.LocationObject | null>(null);
-  
+  const [onboardingStep, setOnboardingStep] = useState(0);
+  const [location, setLocation] = useState<any>(null);
+ 
+  // Visibility States
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isChatVisible, setIsChatVisible] = useState(false);
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const [isAccountVisible, setIsAccountVisible] = useState(false);
   const [isCafesVisible, setIsCafesVisible] = useState(false);
-  const [isFriendsVisible, setIsFriendsVisible] = useState(false); // NEW
-  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
-  const [isTimePickerVisible, setIsTimePickerVisible] = useState(false);
-
-  const [isThinking, setIsThinking] = useState(false); 
+  const [isFriendsVisible, setIsFriendsVisible] = useState(false); // ADDED: Friends state
+ 
+  // AI States
+  const [isThinking, setIsThinking] = useState(false);
   const [chatMessages, setChatMessages] = useState([{ role: 'bot', text: 'Γεια! Πώς μπορώ να βοηθήσω στο διάβασμα;' }]);
   const [inputText, setInputText] = useState('');
-  const [chatSession, setChatSession] = useState<ChatSession | null>(null);
+  const [chatSession, setChatSession] = useState<any>(null);
 
-  const [currentField, setCurrentField] = useState<string>('');
+  // Profile data
+  const [currentField, setCurrentField] = useState('');
   const [profileData, setProfileData] = useState({ studies: 'Select', level: 'Select', style: 'Select', detail: '' });
   const [interests, setInterests] = useState(['TECH', 'BUSINESS', 'ART']);
-  
+ 
+  // Reservation states
   const [selectedCafe, setSelectedCafe] = useState<any>(null);
-  const [reservationType, setReservationType] = useState<'alone' | 'team' | null>(null);
-  const [teamOption, setTeamOption] = useState<'friends' | 'others' | null>(null);
+  const [reservationType, setReservationType] = useState<any>(null);
+  const [teamOption, setTeamOption] = useState<any>(null);
+
+  // States για την αλλαγή ημερομηνίας/ώρας
   const [resDate, setResDate] = useState('dd/mm/yy');
   const [resTime, setResTime] = useState('00:00');
+  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
+  const [isTimePickerVisible, setIsTimePickerVisible] = useState(false);
 
   const fadeAnim = new Animated.Value(0);
 
@@ -93,12 +110,14 @@ export default function StudyBrewApp() {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
     if (!permissionResult.granted) { Alert.alert("Permission Required"); return; }
     const result = await ImagePicker.launchCameraAsync();
-    if (!result.canceled) Alert.alert("Success!", "Photo was uploaded!");
+    if (!result.canceled) Alert.alert("Success!", "Photo captured!");
   };
 
   const getOptions = () => {
     if (currentField === 'level') return ['Λύκειο', 'Προπτυχιακός', 'Μεταπτυχιακός', 'Διδακτορικός'];
-    if (currentField === 'studies') return ['Ανθρωπιστικών', 'Θετικών', 'Υγείας', 'Οικονομίας', 'Άλλο'];
+    if (currentField === 'studies') {
+        return profileData.level === 'Λύκειο' ? highSchoolDirections : greekUniversities;
+    }
     return ['Hybrid', 'Silent', 'Group Study', 'Café Vibes'];
   };
 
@@ -123,26 +142,45 @@ export default function StudyBrewApp() {
 
   if (onboardingStep === 1) return (
     <View style={styles.loginContainer}>
-      <Text style={styles.welcomeText}>Brew your profile!</Text>
-      <Text style={styles.label}>Level:</Text>
-      <TouchableOpacity style={styles.input} onPress={() => { setCurrentField('level'); setIsModalVisible(true); }}><Text>{profileData.level}</Text></TouchableOpacity>
-      <Text style={styles.label}>{profileData.level === 'Λύκειο' ? 'Studies:' : 'University:'}</Text>
-      <TouchableOpacity style={styles.input} onPress={() => { setCurrentField('studies'); setIsModalVisible(true); }}><Text>{profileData.studies}</Text></TouchableOpacity>
-      
-      <Text style={styles.label}>Interests:</Text>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
-        {interests.map((i, idx) => (
-            <TouchableOpacity key={idx} style={styles.interestBtn}>
-                <Text style={{fontSize: 10, fontWeight: 'bold'}}>{i}</Text>
-            </TouchableOpacity>
-        ))}
-      </View>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <Text style={styles.welcomeText}>Brew your profile!</Text>
+        <Text style={styles.label}>Level:</Text>
+        <TouchableOpacity style={styles.input} onPress={() => { setCurrentField('level'); setIsModalVisible(true); }}><Text>{profileData.level}</Text></TouchableOpacity>
+       
+        {/* Δυναμικό label ανάλογα με το level */}
+        <Text style={styles.label}>{profileData.level === 'Λύκειο' ? 'Studies:' : 'University:'}</Text>
+        <TouchableOpacity style={styles.input} onPress={() => { setCurrentField('studies'); setIsModalVisible(true); }} disabled={profileData.level === 'Select'}><Text>{profileData.studies}</Text></TouchableOpacity>
+       
+        {/* Εμφάνιση School αν είναι Λύκειο ή Studies αν είναι Πανεπιστήμιο */}
+        {profileData.studies !== 'Select' && (
+          <View>
+            <Text style={styles.label}>{profileData.level === 'Λύκειο' ? 'School:' : 'Studies:'}</Text>
+            <TextInput
+              style={styles.input}
+              placeholder={profileData.level === 'Λύκειο' ? "e.g. 1st High School of Athens" : "e.g. Informatics Department"}
+              placeholderTextColor="#A1887F"
+              value={profileData.detail}
+              onChangeText={(txt) => setProfileData({...profileData, detail: txt})}
+            />
+          </View>
+        )}
 
-      <Text style={styles.label}>Study style:</Text>
-      <TouchableOpacity style={styles.input} onPress={() => { setCurrentField('style'); setIsModalVisible(true); }}><Text>{profileData.style}</Text></TouchableOpacity>
-      <TouchableOpacity style={styles.loginBtn} onPress={() => setOnboardingStep(2)}><Text style={styles.loginBtnText}>next</Text></TouchableOpacity>
+        <Text style={styles.label}>Interests:</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
+          {interests.map((i, idx) => (
+              <TouchableOpacity key={idx} style={styles.interestBtn}>
+                  <Text style={{fontSize: 10, fontWeight: 'bold'}}>{i}</Text>
+              </TouchableOpacity>
+          ))}
+        </View>
+
+        <Text style={styles.label}>Study style:</Text>
+        <TouchableOpacity style={styles.input} onPress={() => { setCurrentField('style'); setIsModalVisible(true); }}><Text>{profileData.style}</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.loginBtn} onPress={() => setOnboardingStep(2)}><Text style={styles.loginBtnText}>next</Text></TouchableOpacity>
+      </ScrollView>
+
       <Modal visible={isModalVisible} transparent animationType="slide">
-        <View style={styles.modalOverlay}><View style={styles.modalContent}><ScrollView>{getOptions().map((item) => (<TouchableOpacity key={item} onPress={() => { setProfileData({...profileData, [currentField as keyof typeof profileData]: item}); setIsModalVisible(false); }}><Text style={styles.modalItem}>{item}</Text></TouchableOpacity>))}</ScrollView></View></View>
+        <View style={styles.modalOverlay}><View style={styles.modalContent}><ScrollView>{getOptions().map((item) => (<TouchableOpacity key={item} onPress={() => { if (currentField === 'level') { setProfileData({...profileData, level: item, studies: 'Select', detail: ''}); } else { setProfileData({...profileData, [currentField]: item}); } setIsModalVisible(false); }}><Text style={styles.modalItem}>{item}</Text></TouchableOpacity>))}</ScrollView></View></View>
       </Modal>
     </View>
   );
@@ -153,7 +191,7 @@ export default function StudyBrewApp() {
       <TouchableOpacity style={styles.photoContainer} onPress={openCamera}><Text style={styles.placeholderIcon}>👤</Text><Text style={styles.addPhotoText}>Add photo!</Text></TouchableOpacity>
       <TextInput style={styles.bioInput} placeholder="Bio..." multiline placeholderTextColor="#A1887F" />
       <Text style={styles.label}>Find study spots near me!</Text>
-      <TouchableOpacity style={styles.locationBtn} onPress={handleLogin}><Text style={{color: '#4E342E'}}>share your location</Text></TouchableOpacity>
+      <TouchableOpacity style={styles.locationBtn} onPress={handleLogin}><Text style={{color: '#4E342E'}}>Share your location</Text></TouchableOpacity>
       <TouchableOpacity style={styles.loginBtn} onPress={() => setOnboardingStep(3)}><Text style={styles.loginBtnText}>Done</Text></TouchableOpacity>
     </View>
   );
@@ -169,10 +207,10 @@ export default function StudyBrewApp() {
         </TouchableOpacity>
       </View>
 
-      <MapView 
-        style={styles.map} 
-        showsUserLocation={true} 
-        initialRegion={{ latitude: 37.9838, longitude: 23.7275, latitudeDelta: 0.1, longitudeDelta: 0.1 }} 
+      <MapView
+        style={styles.map}
+        showsUserLocation={true}
+        initialRegion={{ latitude: 37.9838, longitude: 23.7275, latitudeDelta: 0.1, longitudeDelta: 0.1 }}
         onPress={() => { setSelectedCafe(null); setReservationType(null); setTeamOption(null); }}
       >
         {dummyCafes.map(cafe => (
@@ -181,7 +219,7 @@ export default function StudyBrewApp() {
           </Marker>
         ))}
       </MapView>
-      
+     
       {selectedCafe && (
         <View style={styles.reservationOverlay}>
             <View style={styles.reservationCard}>
@@ -214,11 +252,15 @@ export default function StudyBrewApp() {
       {/* FOOTER */}
       <View style={styles.footer}>
         <TouchableOpacity style={styles.navBtn} onPress={() => setIsCafesVisible(true)}>
-          <Text style={styles.navIcon}>🏠</Text>
+          <Text style={styles.navIcon}>☕</Text>
           <Text style={styles.navLabel}>Cafes</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navBtn} onPress={openCamera}><Text style={styles.navIcon}>📷</Text></TouchableOpacity>
-        <TouchableOpacity style={styles.navBtn} onPress={() => setIsChatVisible(true)}><Text style={styles.navIcon}>🤖</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.navBtn} onPress={openCamera}><Text style={styles.navIcon}>📷</Text>
+        <Text style={styles.navLabel}>Post</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navBtn} onPress={() => setIsChatVisible(true)}><Text style={styles.navIcon}>🤖</Text>
+        <Text style={styles.navLabel}>Chatbot</Text>
+        </TouchableOpacity>
       </View>
 
       {/* MODALS */}
@@ -250,10 +292,11 @@ export default function StudyBrewApp() {
           <TouchableOpacity onPress={() => setIsAccountVisible(false)}><Text style={styles.accountTitle}>Account</Text></TouchableOpacity>
           <View style={styles.accountHeaderRow}>
             <View style={styles.profileIconContainer}><Text style={styles.largeProfileIcon}>👤</Text><TouchableOpacity style={styles.plusCircle}><Text style={styles.plusText}>+</Text></TouchableOpacity></View>
-            <Text style={styles.displayNameText}>Display name</Text>
+            <Text style={styles.displayNameText}>nikosp</Text>
           </View>
-          <View style={styles.bioBox}><Text style={styles.bioTitle}>Bio</Text></View>
+          <View style={styles.bioBox}><Text style={styles.bioTitle}>First year at UoA, love cats</Text></View>
           <View style={styles.friendActionRow}>
+            {/* ADDED: onPress triggers setIsFriendsVisible */}
             <TouchableOpacity style={styles.friendBtn} onPress={() => setIsFriendsVisible(true)}><Text style={styles.friendBtnText}>My friends🫂</Text></TouchableOpacity>
             <TouchableOpacity style={styles.friendBtn}><Text style={styles.friendBtnText}>🔍 Find more friends</Text></TouchableOpacity>
           </View>
@@ -261,6 +304,7 @@ export default function StudyBrewApp() {
         </View>
       </Modal>
 
+      {/* ADDED: My Friends Modal */}
       <Modal visible={isFriendsVisible} animationType="slide">
         <View style={[styles.accountContainer, { backgroundColor: '#C8A276' }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 30 }}>
@@ -287,7 +331,7 @@ export default function StudyBrewApp() {
             ))}
           </ScrollView>
           <TouchableOpacity onPress={() => setIsFriendsVisible(false)} style={{ marginTop: 20 }}>
-            <Text style={{ textAlign: 'center', fontSize: 20, fontWeight: 'bold', color: '#4E342E' }}>Close</Text>
+            <Text style={{ textAlign: 'center', fontSize: 20, fontWeight: 'bold', color: '#FAF3E0' }}>Close</Text>
           </TouchableOpacity>
         </View>
       </Modal>
@@ -346,7 +390,7 @@ const styles = StyleSheet.create({
   resRedTitleSmall: { color: '#A52A2A', fontSize: 14, fontWeight: 'bold' },
   resTypeRow: { flexDirection: 'row', justifyContent: 'space-around', marginVertical: 8 },
   resTypeBox: { borderWidth: 1, borderColor: '#000', padding: 4, width: 55, alignItems: 'center' },
-  activeBox: { backgroundColor: '#E0E0E0' }, 
+  activeBox: { backgroundColor: '#E0E0E0' },
   resTypeText: { fontWeight: 'bold', fontSize: 12 },
   teamOptionsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
   smallOptionBox: { borderWidth: 1, borderColor: '#000', padding: 3, flex: 0.48, alignItems: 'center' },
@@ -401,11 +445,12 @@ const styles = StyleSheet.create({
   friendActionRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 40 },
   friendBtn: { borderBottomWidth: 1, borderColor: '#4E342E' },
   friendBtnText: { fontSize: 18, fontWeight: 'bold', color: '#4E342E' },
-  friendRowItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginVertical: 10 },
-  friendAvatar: { width: 60, height: 60, borderRadius: 30, marginRight: 15 },
-  friendNameText: { fontSize: 20, fontWeight: 'bold', color: '#4E342E', textDecorationLine: 'underline' },
   editInfoBtn: { borderBottomWidth: 1, borderColor: '#4E342E', alignSelf: 'flex-start' },
   editInfoText: { fontSize: 18, fontWeight: 'bold', color: '#4E342E' },
   cafesContainer: { flex: 1, padding: 40, backgroundColor: '#FAF3E0' },
-  cafeCard: { backgroundColor: '#FFF', padding: 15, borderRadius: 10, marginBottom: 15, borderWidth: 1, borderColor: '#D7CCC8' }
+  cafeCard: { backgroundColor: '#FFF', padding: 15, borderRadius: 10, marginBottom: 15, borderWidth: 1, borderColor: '#D7CCC8' },
+  // ADDED: Styles for the new friends modal elements
+  friendRowItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginVertical: 10 },
+  friendAvatar: { width: 60, height: 60, borderRadius: 30, marginRight: 15 },
+  friendNameText: { fontSize: 20, fontWeight: 'bold', color: '#4E342E', textDecorationLine: 'underline' }
 });
